@@ -407,6 +407,42 @@ Value *IRBuilderBPF::CreateStrcmp(Value* val, std::string str, bool inverse) {
   return result;
 }
 
+Value *IRBuilderBPF::CreateStrcmp(Value* val1, Value* val2, bool inverse) {
+  Function *parent = GetInsertBlock()->getParent();
+  BasicBlock *str_ne = BasicBlock::Create(module_.getContext(), "strcmp.false", parent);
+  AllocaInst *store = CreateAllocaBPF(getInt8Ty(), "strcmp.result");
+
+  CreateStore(getInt1(inverse), store);
+
+  for (size_t i = 0; i < bpftrace_.strlen_; i++)
+  {
+    BasicBlock *char_eq = BasicBlock::Create(module_.getContext(), "strcmp.loop", parent);
+
+    AllocaInst *val_char1 = CreateAllocaBPF(getInt8Ty(), "strcmp.char1");
+    Value *ptr1 = CreateAdd(val1, getInt64(i));
+    CreateProbeRead(val_char1, 1, ptr1);
+    Value *l = CreateLoad(getInt8Ty(), val_char1);
+
+    AllocaInst *val_char2 = CreateAllocaBPF(getInt8Ty(), "strcmp.char2");
+    Value *ptr2 = CreateAdd(val2, getInt64(i));
+    CreateProbeRead(val_char2, 1, ptr2);
+    Value *r = CreateLoad(getInt8Ty(), val_char2);
+
+    Value *cmp = CreateICmpNE(l, r, "strcmp.cmp");
+
+    CreateCondBr(cmp, str_ne, char_eq);
+    SetInsertPoint(char_eq);
+  }
+
+  CreateStore(getInt1(!inverse), store);
+  CreateBr(str_ne);
+
+  SetInsertPoint(str_ne);
+  Value *result = CreateLoad(store);
+  CreateLifetimeEnd(store);
+  return result;
+}
+
 CallInst *IRBuilderBPF::CreateGetNs()
 {
   // u64 ktime_get_ns()

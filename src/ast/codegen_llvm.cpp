@@ -753,28 +753,48 @@ void CodegenLLVM::visit(Binop &binop)
   Type &type = binop.left->type.type;
   if (type == Type::string)
   {
-    Value *val;
+    Value *left_string = nullptr;
+    Value *right_string = nullptr;
     std::string string_literal("");
-    if (binop.right->is_literal) {
+
+    if (binop.right->is_literal)
+    {
       binop.left->accept(*this);
-      val = expr_;
-      string_literal = reinterpret_cast<String*>(binop.right)->str;
-    } else {
+      left_string = expr_;
+      string_literal = reinterpret_cast<String *>(binop.right)->str;
+    }
+    else if (binop.left->is_literal)
+    {
       binop.right->accept(*this);
-      val = expr_;
-      string_literal = reinterpret_cast<String*>(binop.left)->str;
+      left_string = expr_;
+      string_literal = reinterpret_cast<String *>(binop.left)->str;
+    }
+    else
+    {
+      binop.right->accept(*this);
+      left_string = expr_;
+
+      binop.left->accept(*this);
+      right_string = expr_;
     }
 
-    switch (binop.op) {
-      case bpftrace::Parser::token::EQ:
-        expr_ = b_.CreateStrcmp(val, string_literal);
-        break;
-      case bpftrace::Parser::token::NE:
-        expr_ = b_.CreateStrcmp(val, string_literal, true);
-        break;
-      default:
-        std::cerr << "missing codegen to string operator \"" << opstr(binop) << "\"" << std::endl;
-        abort();
+    switch (binop.op)
+    {
+    case bpftrace::Parser::token::EQ:
+      if (right_string)
+        expr_ = b_.CreateStrcmp(left_string, right_string);
+      else
+        expr_ = b_.CreateStrcmp(left_string, string_literal);
+      break;
+    case bpftrace::Parser::token::NE:
+      if (right_string)
+        expr_ = b_.CreateStrcmp(left_string, right_string, true);
+      else
+        expr_ = b_.CreateStrcmp(left_string, string_literal, true);
+      break;
+    default:
+      std::cerr << "missing codegen to string operator \"" << opstr(binop) << "\"" << std::endl;
+      abort();
     }
   }
   else
