@@ -408,6 +408,18 @@ Value *IRBuilderBPF::CreateStrcmp(Value* val, std::string str, bool inverse) {
 }
 
 Value *IRBuilderBPF::CreateStrcmp(Value* val1, Value* val2, bool inverse) {
+  // This function compares each character of the two string.
+  // It returns true if all are equal and false if any are different
+  // strcmp(String val1, String val2)
+  // {
+  //    for (size_t i = 0; i < bpftrace_.strlen_; i++) {
+  //      if (val1[i] != val2[i]) {
+  //        return false;
+  //      }
+  //    }
+  //    return true;
+  // }
+
   Function *parent = GetInsertBlock()->getParent();
   BasicBlock *str_ne = BasicBlock::Create(module_.getContext(), "strcmp.false", parent);
   AllocaInst *store = CreateAllocaBPF(getInt8Ty(), "strcmp.result");
