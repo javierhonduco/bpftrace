@@ -783,7 +783,7 @@ void CodegenLLVM::visit(Binop &binop)
       binop.left->accept(*this);
       Value * left_string = expr_;
 
-      expr_ = b_.CreateStrcmp(left_string, right_string);
+      expr_ = b_.CreateStrcmp(left_string, right_string, inverse);
     }
   }
   else
