@@ -1,0 +1,2 @@
+*.bt linguist-language=dtrace
+*.bt linguist-vendored
